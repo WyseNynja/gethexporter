@@ -32,6 +32,7 @@ func init() {
 	geth.TotalEth = big.NewInt(0)
 }
 
+// GethInfo is the node stats we care about
 type GethInfo struct {
 	GethServer       string
 	ContractsCreated int64
@@ -46,9 +47,10 @@ type GethInfo struct {
 	LastBlockUpdate  time.Time
 	SugGasPrice      *big.Int
 	PendingTx        uint
-	NetworkId        *big.Int
+	NetworkID        *big.Int
 }
 
+// Address holds stats for an Ethereum address
 type Address struct {
 	Balance *big.Int
 	Address string
@@ -58,6 +60,7 @@ type Address struct {
 func main() {
 	var err error
 	defer eth.Close()
+
 	geth.GethServer = os.Getenv("GETH")
 	watchingAddresses = os.Getenv("ADDRESSES")
 	delay, _ = strconv.Atoi(os.Getenv("DELAY"))
@@ -78,13 +81,14 @@ func main() {
 
 	log.Printf("Geth Exporter running on http://localhost:9090/metrics\n")
 
-	http.HandleFunc("/metrics", MetricsHttp)
+	http.HandleFunc("/metrics", MetricsHTTP)
 	err = http.ListenAndServe(":9090", nil)
 	if err != nil {
 		panic(err)
 	}
 }
 
+// CalculateTotals sums block stats
 func CalculateTotals(block *types.Block) {
 	geth.TotalEth = big.NewInt(0)
 	geth.ContractsCreated = 0
@@ -114,6 +118,7 @@ func CalculateTotals(block *types.Block) {
 	geth.BlockSize = stringToFloat(size[0]) * 1000
 }
 
+// Routine fetches all the stats we want to track
 func Routine() {
 	var lastBlock *types.Block
 	ctx := context.Background()
@@ -128,9 +133,9 @@ func Routine() {
 		}
 		geth.SugGasPrice, _ = eth.SuggestGasPrice(ctx)
 		geth.PendingTx, _ = eth.PendingTransactionCount(ctx)
-		geth.NetworkId, _ = eth.NetworkID(ctx)
+		geth.NetworkID, _ = eth.NetworkID(ctx)
 		if err != nil {
-			geth.NetworkId = big.NewInt(0)
+			geth.NetworkID = big.NewInt(0)
 		}
 		geth.Sync, _ = eth.SyncProgress(ctx)
 
@@ -159,9 +164,8 @@ func Routine() {
 	}
 }
 
-//
-// HTTP response handler for /metrics
-func MetricsHttp(w http.ResponseWriter, r *http.Request) {
+// MetricsHTTP handles the HTTP response for /metrics
+func MetricsHTTP(w http.ResponseWriter, r *http.Request) {
 	var allOut []string
 	block := geth.CurrentBlock
 	if block == nil {
@@ -183,7 +187,7 @@ func MetricsHttp(w http.ResponseWriter, r *http.Request) {
 	allOut = append(allOut, fmt.Sprintf("geth_block_size_bytes %v", geth.BlockSize))
 	allOut = append(allOut, fmt.Sprintf("geth_gas_price %v", geth.SugGasPrice))
 	allOut = append(allOut, fmt.Sprintf("geth_pending_transactions %v", geth.PendingTx))
-	allOut = append(allOut, fmt.Sprintf("geth_network_id %v", geth.NetworkId))
+	allOut = append(allOut, fmt.Sprintf("geth_network_id %v", geth.NetworkID))
 	allOut = append(allOut, fmt.Sprintf("geth_contracts_created %v", geth.ContractsCreated))
 	allOut = append(allOut, fmt.Sprintf("geth_token_transfers %v", geth.TokenTransfers))
 	allOut = append(allOut, fmt.Sprintf("geth_eth_transfers %v", geth.EthTransfers))
@@ -201,7 +205,7 @@ func MetricsHttp(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Write([]byte(strings.Join(allOut, "\n")))
-	w.Write("\n")
+	w.Write([]byte("\n"))
 }
 
 // stringToFloat will simply convert a string to a float
@@ -210,8 +214,7 @@ func stringToFloat(s string) float64 {
 	return amount
 }
 
-//
-// CONVERTS WEI TO ETH
+// ToEther converts WEI to ETH
 func ToEther(o *big.Int) *big.Float {
 	pul, int := big.NewFloat(0), big.NewFloat(0)
 	int.SetInt(o)
