@@ -3,11 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/ethereum/go-ethereum"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/ethclient"
 	"log"
 	"math/big"
 	"net/http"
@@ -15,6 +10,12 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/ethclient"
 )
 
 var (
@@ -128,6 +129,9 @@ func Routine() {
 		geth.SugGasPrice, _ = eth.SuggestGasPrice(ctx)
 		geth.PendingTx, _ = eth.PendingTransactionCount(ctx)
 		geth.NetworkId, _ = eth.NetworkID(ctx)
+		if err != nil {
+			geth.NetworkId = big.NewInt(0)
+		}
 		geth.Sync, _ = eth.SyncProgress(ctx)
 
 		if lastBlock == nil || geth.CurrentBlock.NumberU64() > lastBlock.NumberU64() {
@@ -197,6 +201,7 @@ func MetricsHttp(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Write([]byte(strings.Join(allOut, "\n")))
+	w.Write("\n")
 }
 
 // stringToFloat will simply convert a string to a float
